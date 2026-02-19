@@ -1,0 +1,59 @@
+{
+  description = "A very basic flake with Hyprland 0.46.2";
+
+  inputs = {
+    nixpkgs = {
+      url = "nixpkgs/nixos-24.11";
+    };
+    nixpkgs_unstable = {
+      url = "nixpkgs/nixos-unstable";
+    };
+
+    # Follow the COSMIC-provided stable nixpkgs revision.
+    #nixpkgs.follows = "nixos-cosmic/nixpkgs-stable";
+
+    #nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
+  };
+
+  outputs = { self, nixpkgs, nixpkgs_unstable, ... }:
+  let
+    lib = nixpkgs.lib;
+    system = "x86_64-linux";
+    config.allowUnfree = true;
+  in {
+    nixosConfigurations = {
+      nixos = lib.nixosSystem {
+        system = system;
+        modules = [
+          {
+            # Configure COSMIC-specific Nix settings.
+            nix.settings = {
+              substituters = [ "https://cosmic.cachix.org/" ];
+              trusted-public-keys = [
+                "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE="
+              ];
+            };
+
+            # Add overlays: first the COSMIC overlay, then any custom overlays.
+            nixpkgs.overlays = [
+              (final: prev: {
+                unityhub = prev.unityhub.overrideAttrs (oldAttrs: rec {
+                  postInstall = (oldAttrs.postInstall or "") + ''
+                    wrapProgram $out/bin/unityhub --set ELECTRON_ENABLE_WAYLAND=1
+                  '';
+                });
+              })
+            ];
+          }
+
+          # Import the default COSMIC NixOS module.
+          #nixos-cosmic.nixosModules.default
+
+          # Your additional configuration.
+          ./configuration.nix
+        ];
+        # Notice that we do not pass custom `pkgs` via specialArgs.
+      };
+    };
+  };
+}

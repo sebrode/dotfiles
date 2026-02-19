@@ -1,0 +1,107 @@
+{
+  description = "NixOS configuration with stable Hyprland and easy plugin setup";
+
+  inputs = {
+   
+    nixpkgs = {
+      url = "nixpkgs/nixos-24.11";
+    };
+    nixpkgs.follows = "nixos-cosmic/nixpkgs-stable";
+    nixos-cosmic.url = "github:lilyinstarlight/nixos-cosmic";
+
+  };
+
+  outputs = { self, nixpkgs, nixos-cosmic, ... }:
+    let
+      lib = nixpkgs.lib;
+      system = "x86_64-linux";
+    in {
+      nixosConfigurations = {
+        nixos = lib.nixosSystem {
+          system = system;
+          modules = [
+            {
+              nix.settings = {
+                substituters = [ "https://cosmic.cachix.org/" ];
+                trusted-public-keys = [ "cosmic.cachix.org-1:Dya9IyXD4xdBehWjrkPv6rtxpmMdRel02smYzA85dPE=" ];
+              };
+              # Example overlay (your unityhub overlay)
+              nixpkgs.overlays = [
+                (final: prev: {
+                  unityhub = prev.unityhub.overrideAttrs (oldAttrs: rec {
+                    postInstall = (oldAttrs.postInstall or "") + ''
+                      wrapProgram $out/bin/unityhub --set ELECTRON_ENABLE_WAYLAND=1
+                    '';
+                  });
+                })
+              ];
+
+              # Import a custom module to define options.services.hyprland
+              imports = [
+                ({ config, pkgs, lib, ... }: {
+                  options.services.hyprland = {
+                    enable = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Enable the Hyprland compositor service.";
+                    };
+                    package = lib.mkOption {
+                      type = lib.types.package;
+                      default = pkgs.hyprland;
+                      description = "Hyprland package to use.";
+                    };
+                    config = lib.mkOption {
+                      type = lib.types.attrs;
+                      default = {};
+                      description = "Hyprland configuration (including plugins).";
+                    };
+                  };
+
+                  config = lib.mkIf config.services.hyprland.enable {
+                    systemd.user.services.hyprland = {
+                      description = "Hyprland compositor service";
+                      after = [ "graphical-session.target" ];
+                      wantedBy = [ "graphical-session.target" ];
+                      serviceConfig = {
+                        ExecStart = "${config.services.hyprland.package}/bin/hyprland";
+                        # You can extend this to generate a config file from
+                        # config.services.hyprland.config if needed.
+                      };
+                    };
+                  };
+                })
+              ];
+
+              # Enable and configure Hyprland.
+              services.hyprland.enable = true;
+              # Use the stable channel’s package.
+              services.hyprland.package = nixpkgs.legacyPackages.${system}.hyprland;
+              services.hyprland.config = {
+                general = {
+                  #mod = "Mod4";
+                  # Add further general settings as desired.
+                };
+                plugins = {
+                  # For example:
+                  # "example-plugin" = "/path/to/plugin.so";
+                };
+              };
+
+              # Set environment variables to support Wayland-native apps.
+              environment.variables = {
+                MOZ_ENABLE_WAYLAND = "1";
+                QT_QPA_PLATFORM = "wayland";
+              };
+
+              # (Other options, such as XWayland or GPU acceleration,
+              # can be defined in your additional ./configuration.nix.)
+            }
+
+            # Import your additional configuration.
+            nixos-cosmic.nixosModules.default
+            ./configuration.nix
+          ];
+        };
+      };
+    };
+}

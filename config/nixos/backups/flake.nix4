@@ -1,0 +1,40 @@
+{
+  description = "NixOS configuration with stable Hyprland (unstable flake + module‐injection)";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  };
+
+  outputs = { self, nixpkgs, ... }:
+  let
+    system = "x86_64-linux";
+
+    pkgs = import nixpkgs {
+      inherit system;
+      config = {
+        allowUnfree = true;
+        # android_sdk.accept_license = true;
+      };
+    };
+  in
+  {
+    nixosConfigurations = {
+      # “nixos” is the name of your host; adjust as needed
+      nixos = nixpkgs.lib.nixosSystem {
+        inherit system;
+
+        # Remove the old overlaysModule: we don’t set nixpkgs.overlays/config in any module.
+        modules = [ ./configuration.nix ];
+
+        # Hand NixOS the exact `pkgs` we built above.
+        # This means NixOS will ignore any attempt to set `nixpkgs.overlays` or `nixpkgs.config`
+        # inside ./configuration.nix (or any other module).
+        pkgs = pkgs;
+
+        # If you want “with pkgs; …” to work inside configuration.nix, you can still expose it:
+        # specialArgs = { inherit pkgs; };
+        # (optional, only if your .nix modules do “with pkgs; …”)
+      };
+    };
+  };
+}

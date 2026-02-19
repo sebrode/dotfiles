@@ -1,0 +1,87 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 24,
+    "modules-center": ["hyprland/workspaces"],
+    "modules-left": ["cpu", "memory", "battery", "hyprland/window"],
+    "modules-right": ["pulseaudio", "network", "tray", "custom/spotify", "custom/hypridle_toggle", "clock", "custom/power_menu"],
+    
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}",
+    	"format-icons": {
+        	"current": "● {name}",
+        	"inactive": "{name}"
+        }
+    },
+
+    "tray": {
+        "spacing": 10
+    },
+    "clock": {
+        "format-alt": "{:%Y-%m-%d}"
+    },
+    "cpu": {
+        "format": "{usage}% "
+    },
+    "memory": {
+        "format": "{}% "
+    },
+    "battery": {
+        "format": "{capacity}%<span font='Font Awesome 5 Free 11'> {icon}</span>",
+        "format-icons": [" ", " ", " ", " ", " "],
+        "format-charging": "{capacity}%<span font='Font Awesome 5 Free'></span> <span font='Font Awesome 5 Free 11'>{icon}</span>",
+        "format-full": "{capacity}%<span font='Font Awesome 5 Free'></span> <span font='Font Awesome 5 Free 11'>{icon}</span> Charged",
+        "interval": 2,
+        "states": {
+            "warning": 25,
+            "critical": 10
+        },
+        "tooltip": false,
+        "on-click": "2"
+    },
+    "network": {
+        
+        "format-wifi": "{essid} ({signalStrength}%)  ",
+        "format-ethernet": "{ifname}: {ipaddr}/{cidr}  ",
+        "format-disconnected": "Disconnected ⚠ ",
+        "on-click": "nm-connection-editor"
+    },
+    "pulseaudio": {
+        "format": "{volume}% {icon}",
+        "format-bluetooth": "{volume}% {icon}",
+        "format-muted": "",
+        "format-icons": {
+            "headphones": "",
+            "handsfree": "󰥉",
+            "headset": "󰥉",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+    "custom/spotify": {
+        "format": " {}",
+        "max-length": 40,
+        "interval": 30,
+        "exec": "$HOME/.config/waybar/mediaplayer.sh 2> /dev/null",
+        "exec-if": "pgrep spotify"
+    },
+
+     "custom/hypridle_toggle": {
+        "format": "{}",
+        "exec": "/home/seb/.config/waybar/hypridle_status.sh",
+        "interval": 1,
+        "on-click": "bash /home/seb/.config/waybar/toggle_hypridle.sh",
+        "tooltip": "Toggle Hypridle",
+        },
+
+    "custom/power_menu": {
+    "format": " ",
+    "on-click": "bash ~/.config/waybar/power_menu.sh"
+    }
+
+}
