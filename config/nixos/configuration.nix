@@ -257,6 +257,7 @@
     nwg-displays
     # ollama
     openjdk17
+    quickshell
     patchelf
     pavucontrol
     # plex
