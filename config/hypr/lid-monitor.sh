@@ -37,22 +37,36 @@ ensure_internal_visible() {
   hyprctl dispatch workspace 1 >/dev/null 2>&1 || true
 }
 
+lock_noctalia() {
+  # Noctalia lock
+  qs -c noctalia-shell ipc call lockScreen lock >/dev/null 2>&1 || true
+}
+
+suspend_debounced() {
+  # Prevent rapid re-suspends if lid event fires multiple times
+  local stamp="${XDG_RUNTIME_DIR:-/tmp}/hypr-suspend.last"
+  local now last=0
+  now="$(date +%s)"
+  [[ -f "$stamp" ]] && last="$(cat "$stamp" 2>/dev/null || echo 0)"
+
+  if (( now - last >= 3 )); then
+    echo "$now" > "$stamp"
+    # small delay so lock surface is up before suspend
+    sleep 0.4
+    # prefer loginctl for unprivileged users
+    loginctl suspend >/dev/null 2>&1 || systemctl suspend >/dev/null 2>&1 || true
+  fi
+}
+
 reload_on_removal_if_needed() {
-  # If this run was triggered by monitor removal, Hyprland can end up with
-  # missing workspaces / dead layer surfaces. A reload fixes it for you.
-  # Debounce so we don't crash by reloading 10 times in a second.
   if [[ "${HYPRLAND_EVENT:-}" == "monitorremoved" ]]; then
     local stamp="${XDG_RUNTIME_DIR:-/tmp}/hypr-reload.last"
-    local now
+    local now last=0
     now="$(date +%s)"
-
-    local last=0
     [[ -f "$stamp" ]] && last="$(cat "$stamp" 2>/dev/null || echo 0)"
 
-    # only allow one reload every 2 seconds
     if (( now - last >= 2 )); then
       echo "$now" > "$stamp"
-      # tiny delay so outputs settle before reload
       sleep 0.2
       hyprctl reload >/dev/null 2>&1 || true
     fi
@@ -60,17 +74,19 @@ reload_on_removal_if_needed() {
 }
 
 # ---- main ----
+mapfile -t ext < <(externals)
+
 if lid_closed; then
-  hyprctl keyword monitor "${INTERNAL},disable" >/dev/null 2>&1 || true
-
-  sleep 0.15
-  mapfile -t ext < <(externals)
-
+  # If NO external monitors: lock with Noctalia and suspend
   if [[ ${#ext[@]} -eq 0 ]]; then
-    ensure_internal_visible
-    reload_on_removal_if_needed
+    lock_noctalia
+    suspend_debounced
     exit 0
   fi
+
+  # External monitor(s) present: disable internal and move workspaces as before
+  hyprctl keyword monitor "${INTERNAL},disable" >/dev/null 2>&1 || true
+  sleep 0.15
 
   move_ws 1 "${ext[0]}"
   move_ws 2 "${ext[0]}"
@@ -83,7 +99,9 @@ if lid_closed; then
     move_ws 3 "${ext[0]}"
     move_ws 4 "${ext[0]}"
   fi
+
 else
+  # Lid opened: bring internal back. Noctalia stays locked until you unlock.
   ensure_internal_visible
 fi
 
