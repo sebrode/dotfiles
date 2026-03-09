@@ -51,8 +51,9 @@
   services.desktopManager.plasma6.enable = true;
   #services.desktopManager.cosmic.enable = true;
   
-  services.power-profiles-daemon.enable = false;
-  services.tlp.enable = true; #battery management
+  services.power-profiles-daemon.enable = true;
+  
+  services.tlp.enable = false; #battery management
   # services.displayManager.cosmic-greeter.enable = true;
 
   # services.xserver.desktopManager.gnome.enable = true;
@@ -178,6 +179,7 @@
     blueman
     brightnessctl
     cargo
+    claude-code
     #chatgpt #macos only for now
     codex
     copyq
@@ -294,7 +296,7 @@
     unzip
     vim
     vscode
-    waybar
+    #waybar
     wget
     wofi
     kdePackages.konsole

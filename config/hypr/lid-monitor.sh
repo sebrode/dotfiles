@@ -38,8 +38,11 @@ ensure_internal_visible() {
 }
 
 lock_noctalia() {
-  # Noctalia lock
-  qs -c noctalia-shell ipc call lockScreen lock >/dev/null 2>&1 || true
+  local pid
+  pid=$(systemctl --user show -p MainPID --value noctalia-shell.service 2>/dev/null || echo "")
+  if [[ -n "$pid" && "$pid" != "0" ]]; then
+    qs ipc --pid "$pid" call lockScreen lock >/dev/null 2>&1 || true
+  fi
 }
 
 suspend_debounced() {
